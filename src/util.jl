@@ -78,6 +78,22 @@ function hilbert{T<:Real}(x::AbstractArray{T})
     out
 end
 
+function istft(S, wlen, winc; nfft=nextfastfft(wlen), window::Union(Function,AbstractVector,Nothing)=nothing)
+    win, norm2 = DSP.Periodograms.compute_window(window, wlen)
+    win² = win.^2
+    nframes = size(S,2)-1
+    outlen = nfft + nframes*winc
+    out = zeros(outlen)
+    wsum = zeros(outlen)
+    for k = 1:size(S,2)
+        out[1+(k-1)*winc:((k-1)*winc+wlen)] += irfft(S[:,k], wlen).*win
+        wsum[1+(k-1)*winc:((k-1)*winc+wlen)] += win²
+    end
+    pos = wsum .!= 0
+    out[pos] ./= wsum[pos]
+    out
+end
+
 ## FFT TYPES
 
 # Get the input element type of FFT for a given type
