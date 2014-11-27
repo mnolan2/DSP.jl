@@ -113,9 +113,9 @@ function istft{T<:Union(Float32, Float64)}(S::AbstractMatrix{Complex{T}}, wlen::
         if win != nothing
             @inbounds out[1+(k-1)*winc:((k-1)*winc+nfft)] += tmp2.*win
             @inbounds wsum[1+(k-1)*winc:((k-1)*winc+nfft)] += win²
-          else
-            @inbounds out[1+(k-1)*winc:((k-1)*winc+nfft)] = tmp2 #replace by copy
-          end
+        else
+            copy!(out, 1+(k-1)*winc, tmp2, 1, nfft)
+        end
       end
     if win != nothing
         for i=1:length(wsum)
