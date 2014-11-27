@@ -94,7 +94,8 @@ end
 backward_plan{T<:Union(Float32, Float64)}(X::AbstractArray{Complex{T}}, Y::AbstractArray{T}) =
     FFTW.Plan(X, Y, 1, FFTW.ESTIMATE, FFTW.NO_TIMELIMIT).plan
 
-function istft{T<:Union(Float32, Float64)}(S::AbstractMatrix{Complex{T}}, wlen::Int, winc::Int; nfft=nextfastfft(wlen), window::Union(Function,AbstractVector,Nothing)=nothing)
+function istft{T<:Union(Float32, Float64)}(S::AbstractMatrix{Complex{T}}, wlen::Int, overlap::Int; nfft=nextfastfft(wlen), window::Union(Function,AbstractVector,Nothing)=nothing)
+    winc = wlen-overlap
     win, norm2 = compute_window(window, wlen)
     if win != nothing 
       win² = win.^2

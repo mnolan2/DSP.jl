@@ -106,7 +106,7 @@ end
 
 hann_periodic(M::Int) = hann(M, false)
 X1w = stft(x1, 16, 12; window=hann_periodic)
-y1w = istft(X1w, 16, 4; window=hann_periodic)
+y1w = istft(X1w, 16, 12; window=hann_periodic)
 @test_approx_eq x1[2:end] y1w[2:end]
 
 ## FFTFREQ
