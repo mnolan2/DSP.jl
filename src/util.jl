@@ -111,10 +111,11 @@ function istft{T<:Union(Float32, Float64)}(S::AbstractMatrix{Complex{T}}, wlen::
         FFTW.execute(p, tmp1, tmp2)
         scale!(tmp2, FFTW.normalization(tmp2))
         if win != nothing
+            ix = (k-1)*winc
             for n=1:nfft
-                @inbounds out[1+(k-1)*winc:((k-1)*winc+n)] += tmp2[n]*win[n]
+                @inbounds out[ix+n] += tmp2[n]*win[n]
+                @inbounds wsum[ix+n] += win²[n]
             end
-            @inbounds wsum[1+(k-1)*winc:((k-1)*winc+nfft)] += win²
         else
             copy!(out, 1+(k-1)*winc, tmp2, 1, nfft)
         end
