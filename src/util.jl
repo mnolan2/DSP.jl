@@ -1,7 +1,7 @@
 module Util
 
 export unwrap!, unwrap, hilbert, Frequencies, fftintype, fftouttype,
-       fftabs2type, fftfreq, rfftfreq, nextfastfft
+       fftabs2type, fftfreq, rfftfreq, nextfastfft, istft
 
 function unwrap!{T <: FloatingPoint}(m::Array{T}, dim::Integer=ndims(m);
                                      range::Number=2pi)
@@ -78,21 +78,52 @@ function hilbert{T<:Real}(x::AbstractArray{T})
     out
 end
 
-function istft(S, wlen, winc; nfft=nextfastfft(wlen), window::Union(Function,AbstractVector,Nothing)=nothing)
-    win, norm2 = DSP.Periodograms.compute_window(window, wlen)
-    win² = win.^2
+# Evaluate a window function at n points, returning both the window
+# (or nothing if no window) and the squared L2 norm of the window
+compute_window(::Nothing, n::Int) = (nothing, n)
+function compute_window(window::Function, n::Int)
+    win = window(n)::Vector{Float64}
+    norm2 = sumabs2(win)
+    (win, norm2)
+end
+function compute_window(window::AbstractVector, n::Int)
+    length(window) == n || error("length of window must match input")
+    (window, sumabs2(window))
+end
+
+backward_plan{T<:Union(Float32, Float64)}(X::AbstractArray{Complex{T}}, Y::AbstractArray{T}) =
+    FFTW.Plan(X, Y, 1, FFTW.ESTIMATE, FFTW.NO_TIMELIMIT).plan
+
+function istft{T<:Union(Float32, Float64)}(S::AbstractMatrix{Complex{T}}, wlen::Int, winc::Int; nfft=nextfastfft(wlen), window::Union(Function,AbstractVector,Nothing)=nothing)
+    win, norm2 = compute_window(window, wlen)
+    if win != nothing 
+      win² = win.^2
+    end
     nframes = size(S,2)-1
     outlen = nfft + nframes*winc
-    out = zeros(outlen)
+    out = zeros(T, outlen)
+    tmp1 = similar(S[:,1])
+    tmp2 = zeros(T, nfft)
+    p = backward_plan(tmp1, tmp2)
     wsum = zeros(outlen)
     for k = 1:size(S,2)
-        out[1+(k-1)*winc:((k-1)*winc+wlen)] += irfft(S[:,k], wlen).*win
-        wsum[1+(k-1)*winc:((k-1)*winc+wlen)] += win²
+        copy!(tmp1, S[:,k])
+        FFTW.execute(p, tmp1, tmp2)
+        scale!(tmp2, FFTW.normalization(tmp2))
+        if win != nothing
+            @inbounds out[1+(k-1)*winc:((k-1)*winc+nfft)] += tmp2.*win
+            @inbounds wsum[1+(k-1)*winc:((k-1)*winc+nfft)] += win²
+          else
+            @inbounds out[1+(k-1)*winc:((k-1)*winc+nfft)] = tmp2 #replace by copy
+          end
+      end
+    if win != nothing
+        for i=1:length(wsum)
+            @inbounds wsum[i] != 0 && (out[i] /= wsum[i])
+        end
     end
-    pos = wsum .!= 0
-    out[pos] ./= wsum[pos]
     out
-end
+  end
 
 ## FFT TYPES
 
