@@ -107,11 +107,13 @@ function istft{T<:Union(Float32, Float64)}(S::AbstractMatrix{Complex{T}}, wlen::
     p = backward_plan(tmp1, tmp2)
     wsum = zeros(outlen)
     for k = 1:size(S,2)
-        copy!(tmp1, S[:,k])
+        copy!(tmp1, 1, S, 1+(k-1)*size(S,1), length(tmp1))
         FFTW.execute(p, tmp1, tmp2)
         scale!(tmp2, FFTW.normalization(tmp2))
         if win != nothing
-            @inbounds out[1+(k-1)*winc:((k-1)*winc+nfft)] += tmp2.*win
+            for n=1:nfft
+                @inbounds out[1+(k-1)*winc:((k-1)*winc+n)] += tmp2[n]*win[n]
+            end
             @inbounds wsum[1+(k-1)*winc:((k-1)*winc+nfft)] += win²
         else
             copy!(out, 1+(k-1)*winc, tmp2, 1, nfft)
