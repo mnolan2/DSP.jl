@@ -120,14 +120,14 @@ function istft{T<:Union(Float32, Float64)}(S::AbstractMatrix{Complex{T}}, wlen::
         else
             copy!(out, 1+(k-1)*winc, tmp2, 1, nfft)
         end
-      end
+    end
     if win != nothing
         for i=1:length(wsum)
             @inbounds wsum[i] != 0 && (out[i] /= wsum[i])
         end
     end
     out
-  end
+end
 
 ## FFT TYPES
 
