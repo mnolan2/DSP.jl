@@ -363,11 +363,10 @@ function filt_stepstate{T}(f::SecondOrderSections{T})
     si = Array(T, 2, length(biquads))
     for i = 1:length(biquads)
         biquad = biquads[i]
-        A = [one(T)+biquad.a1 -one(T)
-                   +biquad.a2  one(T)]
-        B = [biquad.b1 - biquad.a1*biquad.b0,
-             biquad.b2 - biquad.a2*biquad.b0]
-        si[:, i] = A \ B
+        si[1, i] = (-(biquad.a1 + biquad.a2)*biquad.b0 + biquad.b1 + biquad.b2)/
+                   (biquad.a1 + biquad.a2 + 1)
+        si[2, i] = (biquad.a1*biquad.b2 - biquad.a2*(biquad.b0 + biquad.b1) + biquad.b2)/
+                   (biquad.a1 + biquad.a2 + 1)
     end
     si[1, 1] *= f.g
     si[2, 1] *= f.g
