@@ -104,7 +104,7 @@ function istft{T<:Union(Float32, Float64)}(S::AbstractMatrix{Complex{T}}, wlen::
     nframes = size(S,2)-1
     outlen = nfft + nframes*winc
     out = zeros(T, outlen)
-    tmp1 = similar(S[:,1])
+    tmp1 = Array(eltype(S), size(S, 1))
     tmp2 = zeros(T, nfft)
     p = backward_plan(tmp1, tmp2)
     wsum = zeros(outlen)

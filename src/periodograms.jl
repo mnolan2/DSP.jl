@@ -162,20 +162,6 @@ function fft2oneortwosided!{T}(out::Array{Complex{T}}, s_fft::Vector{Complex{T}}
     out
 end
 
-# Calculate sum of abs2
-# Remove this once we drop support for Julia 0.2
-if isdefined(Base, :sumabs2)
-    sumabs2(x) = Base.sumabs2(x)
-else
-    function sumabs2(s)
-        x = zero(eltype(s))
-        for i = 1:length(s)
-            @inbounds x += abs2(s[i])
-        end
-        x
-    end
-end
-
 ## PERIODOGRAMS
 abstract TFR{T}
 immutable Periodogram{T,F<:Union(Frequencies,Range)} <: TFR{T}
