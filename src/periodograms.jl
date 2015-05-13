@@ -390,4 +390,44 @@ function stft{T}(s::AbstractVector{T}, n::Int=length(s)>>3, noverlap::Int=n>>1,
     out
 end
 
+##  MULTITAPER SPECTROGRAM
+function mtspectrogram{T}(s::AbstractVector{T}, n::Int=length(s)>>3, noverlap::Int=n>>1;
+                          onesided::Bool=eltype(s)<:Real, nfft::Int=nextfastfft(n),
+                          fs::Real=1, window::Union(Function,AbstractVector,Nothing)=nothing)
+    #   this is a copy of the spectrogram function up until this point
+    #   it looks as though the Spectrogram type is packed full of the input arguments
+    #       and the whole shebang is thrown right back at you.
+    out = stmtft(s, n, noverlap, PSDOnly(); onesided=onesided, nfft=nfft, fs=fs, nw=nw, 
+               window=window)
+    #   calling something like the line below is equivalent to popping a return in front of it
+    Spectrogram(out, onesided ? rfftfreq(nfft, fs) : fftfreq(nfft, fs),
+                ((0:size(out,2)-1)*(n-noverlap)+n/2)/fs)
+end
+                          
+function stmtft{T}(s::AbstractVector{T}, n::Int=length(s)>>3, noverlap::Int=n>>1,
+                 psdonly::Union(Nothing, PSDOnly)=nothing;
+                 onesided::Bool=eltype(s)<:Real, nfft::Int=nextfastfft(n), fs::Real=1,
+                 nw::Int=2, window::Union(Function,AbstractVector,Nothing)=nothing)
+    onesided && T <: Complex && error("cannot compute one-sided FFT of a complex signal")
+
+    win, norm2 = compute_window(window, n)
+    sig_split = arraysplit(s, n, noverlap, nfft, win)
+    nout = onesided ? (nfft >> 1)+1 : nfft
+    out = zeros(stfttype(T, psdonly), nout, length(sig_split))
+    tmp = Array(fftouttype(T), T<:Real ? (nfft >> 1)+1 : nfft)
+    r = fs*norm2
+
+    plan = forward_plan(sig_split.buf, tmp)
+    offset = 0
+    for k = 1:length(sig_split)
+        FFTW.execute(plan.plan, sig_split[k], tmp)
+        if isa(psdonly, PSDOnly)
+            fft2pow!(out, tmp, nfft, r, onesided, offset)
+        else
+            fft2oneortwosided!(out, tmp, nfft, onesided, offset)
+        end
+        offset += nout
+    end
+    out
+end
 end # end module definition
